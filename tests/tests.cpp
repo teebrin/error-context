@@ -34,9 +34,11 @@ TEST(Tests, Helper)
             [] {
                 throwWithDetail<SomeDetail>("something");
                 return std::string("wrong"); },
-            [](const y::error::Context& context, const std::exception* e) {
+            [](const y::error::Context& context, std::exception_ptr e) {
                 std::ostringstream s;
-                if (e) { s << "Exception caught:\n  " << *e << '\n'; }
+                try { std::rethrow_exception(e); }
+                catch (const std::exception& e) { s << "Exception caught:\n  " << e << '\n'; }
+                catch(...) {}
                 s << context;
                 return s.str(); });
     EXPECT_THAT(result, HasSubstr("  std::runtime_error: Runtime error description"));
@@ -44,11 +46,11 @@ TEST(Tests, Helper)
     EXPECT_THAT(result, HasSubstr("  throwRuntimeError()"));
 }
 
-TEST(Test, HelperWithVoidFunction)
+TEST(Tests, HelperWithVoidFunction)
 {
     ASSERT_THROW(
             y::error::handleExceptionsWithContext(
                 [] { throwWithDetail<SomeDetail>("something"); },
-                [](const y::error::Context& context, const std::exception* e) { throw; }),
+                [](const y::error::Context& context, std::exception_ptr e) { throw; }),
             std::runtime_error);
 }

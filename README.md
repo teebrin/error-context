@@ -101,11 +101,12 @@ To avoid repeating the same code you saw in the first example above, a helper fu
 
 ```c++
 // Define how you want to handle an exception for your application
-// so that it can be reused.
-void showErrorAndExit(const y::error::Context& context, const std::exception* e)
+// so that it can be reused. This is an academic example.
+void showErrorAndExit(const y::error::Context& context, std::exception_ptr e)
 {
-    // e is null if the exception is not derived from std::exception.
-    if (e) { std::cerr << "Exception caught:\n  " << *e << '\n'; }
+    try { std::rethrow_exception(e); }
+    catch (const std::exception& e) { std::cerr << "Exception caught:\n  " << e << '\n'; }
+    catch (...) { std::cerr << "Unknown exception caught\n"; }
     std::cerr << context << std::endl;
     exit(-1);
 }
@@ -115,7 +116,7 @@ int main(int argc, char** argv)
     // The helper function takes two arguments:
     // * A functor that is always called (the actual code to execute)
     // * A functor to call only when an exception is caught
-    // Both functors should return the same type also returned by the helper.
+    // Both functors should return the same type, which is also returned by the helper.
     y::error::handleExceptionsWithContext(
             [] { functionThatMayThrow("something"); },
             &showErrorAndExit);
@@ -134,7 +135,7 @@ Since the error context is not attached to an exception instance, when such an e
 
 ### StackTrace
 
-Because `std::stacktrace` is very new (C++23) and not available to most C++ code, a non-standard, non-portable version of a `StackTrace` is provided within this library. When C++23 becomes more mainstream, it is planned to migrate towards the `std` version.
+Because `std::stacktrace` is very new (C++23) and not available to most C++ code base, a non-standard, non-portable version of a `StackTrace` is provided within this library. When C++23 becomes more mainstream, it is planned to migrate towards the `std` version.
 
 ### Support for Windows
 
@@ -146,4 +147,4 @@ In the future, the following platform(s) might be supported:
 * Windows+vc
 * Windows+mingw-gcc
 
-Pull-requests are welcomed!
+Pull-requests are welcome!

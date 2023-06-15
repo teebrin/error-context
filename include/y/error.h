@@ -2,6 +2,7 @@
 #define Y_ERROR_H
 
 #include "stacktrace.h"
+#include <cxxabi.h>
 #include <iostream>
 #include <unordered_map>
 #include <typeindex>
@@ -75,17 +76,14 @@ private:
 
 template<typename F, typename E,
         std::enable_if_t<std::is_invocable<F>::value, bool> = true,
-        std::enable_if_t<std::is_invocable<E, const Context&, const std::exception*>::value, bool> = true>
+        std::enable_if_t<std::is_invocable<E, const Context&, std::exception_ptr>::value, bool> = true>
 typename std::invoke_result<F>::type handleExceptionsWithContext(F f, E errorHandler) {
     Context errorContext;
     try {
         return f();
     }
-    catch (const std::exception& e) {
-        return errorHandler(errorContext, &e);
-    }
     catch (...) {
-        return errorHandler(errorContext, nullptr);
+        return errorHandler(errorContext, std::current_exception());
     }
 }
 
