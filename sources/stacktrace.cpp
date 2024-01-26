@@ -2,6 +2,8 @@
 
 #include <y/demangle.h>
 
+#include <string.h>
+
 #include <dlfcn.h>
 #include <execinfo.h>
 #include <ios>
