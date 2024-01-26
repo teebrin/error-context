@@ -1,6 +1,7 @@
 #include "../include/y/demangle.h"
 
 #include <cxxabi.h>
+#include <string.h>
 
 namespace y {
 
