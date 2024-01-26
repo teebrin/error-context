@@ -9,4 +9,4 @@ target_include_directories(error-context PUBLIC ../include)
 target_compile_features(error-context PUBLIC cxx_std_17)
 
 install(TARGETS error-context DESTINATION lib)
-install(DIRECTORY ../include DESTINATION include)
+install(DIRECTORY ../include/ DESTINATION include)
