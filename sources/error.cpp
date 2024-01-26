@@ -44,15 +44,20 @@ std::ostream& operator<<(std::ostream& stream, const y::error::Context::Details&
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Winvalid-noreturn"
-extern "C" void __cxa_throw(void* ex, void* tinfo, void (*dest)(void*)) {
-    Context *errorContext = Context::current;
-    if (errorContext) {
+#if !__clang__
+using TypeInfo = void;
+#else
+using TypeInfo = std::type_info;
+#endif
+
+extern "C" void __cxa_throw(void* ex, TypeInfo* tinfo, void(*dest)(void*)) {
+    if (Context *errorContext = Context::current) {
         errorContext->captureBackTrace();
         errorContext->clearDetails();
     }
-    using RethrowType = void (*)(void*, std::type_info*, void(*)(void*));
-    static auto rethrow = (RethrowType)dlsym(RTLD_NEXT, "__cxa_throw");
-    rethrow(ex, (std::type_info*)tinfo, dest);
+    using RethrowType = void (*)(void*, TypeInfo*, void(*)(void*));
+    static auto rethrow = reinterpret_cast<RethrowType>(dlsym(RTLD_NEXT, "__cxa_throw"));
+    rethrow(ex, tinfo, dest);
 }
 
 #pragma clang diagnostic pop
