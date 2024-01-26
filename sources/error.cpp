@@ -53,7 +53,9 @@ extern "C" void __cxa_throw(void* ex, TypeInfo* tinfo, void(*dest)(void*)) {
         errorContext->captureBackTrace();
         errorContext->clearDetails();
     }
-    using RethrowType = __attribute__((__noreturn__)) void (*)(void*, TypeInfo*, void(*)(void*));
-    static auto rethrow = reinterpret_cast<RethrowType>(dlsym(RTLD_NEXT, "__cxa_throw"));
+    using RethrowType = void (*)(void*, TypeInfo*, void(*)(void*));
+    static auto rethrow =
+        reinterpret_cast<__attribute__((__noreturn__)) RethrowType>(
+            dlsym(RTLD_NEXT, "__cxa_throw"));
     rethrow(ex, tinfo, dest);
 }
