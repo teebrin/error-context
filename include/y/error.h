@@ -83,6 +83,11 @@ typename std::invoke_result<F>::type handleExceptionsWithContext(F f, E errorHan
     try {
         return f();
     }
+#if !__clang__
+    catch (const abi::__forced_unwind&) {
+      throw;
+    }
+#endif
     catch (...) {
         return errorHandler(errorContext, std::current_exception());
     }

@@ -26,11 +26,6 @@ std::function<void(const Context&, std::exception_ptr)> makeThreadPrintErrorHand
         try {
             std::rethrow_exception(eptr);
         }
-#if !__clang__
-        catch (const abi::__forced_unwind&) {
-            throw;
-        }
-#endif
         catch (const std::exception& e) {
             os << e << '\n';
         }
