@@ -1,6 +1,6 @@
 #ifndef ERROR_CONTEXT_THROWRUNTIMEERROR_H
 #define ERROR_CONTEXT_THROWRUNTIMEERROR_H
 
-void throwRuntimeError();
+[[noreturn]] void throwRuntimeError();
 
 #endif //ERROR_CONTEXT_THROWRUNTIMEERROR_H

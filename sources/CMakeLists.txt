@@ -1,7 +1,8 @@
 
 file(GLOB HEADER_LIST CONFIGURE_DEPENDS "../include/y/*.h")
 
-add_library(error-context SHARED)
+add_library(error-context SHARED
+        error-handlers.cpp)
 target_sources(error-context
         PRIVATE error.cpp demangle.cpp stacktrace.cpp
         PUBLIC ${HEADER_LIST})

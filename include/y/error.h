@@ -87,6 +87,9 @@ typename std::invoke_result<F>::type handleExceptionsWithContext(F f, E errorHan
     }
 }
 
+std::function<int(const Context&, std::exception_ptr)> makeMainPrintErrorHandler(std::ostream& os = std::cerr, int exitCode = EXIT_FAILURE);
+std::function<void(const Context&, std::exception_ptr)> makeThreadPrintErrorHandler(std::ostream& os = std::cerr);
+
 }
 
 std::ostream& operator<<(std::ostream& stream, const std::exception& exception);
