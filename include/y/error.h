@@ -3,6 +3,7 @@
 
 #include "stacktrace.h"
 #include <cxxabi.h>
+#include <functional>
 #include <iostream>
 #include <unordered_map>
 #include <typeindex>
