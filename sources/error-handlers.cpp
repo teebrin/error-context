@@ -2,40 +2,26 @@
 
 namespace y::error {
 
-std::function<int(const Context&, std::exception_ptr)> makeMainPrintErrorHandler(std::ostream& os, int exitCode)
-{
-    return [&os, exitCode](const Context& context, const std::exception_ptr& eptr){
-        try {
-            std::rethrow_exception(eptr);
-        }
-        catch (const std::exception& e) {
-            os << e << '\n';
-        }
-        catch (...){
-            os << "Unknown exception" << '\n';
-        }
-
-        os << context << '\n';
-        return exitCode;
-    };
+std::ostream& print_exception_and_context(std::ostream& os, const std::exception_ptr& eptr, const Context& context) {
+    return print_exception(os, eptr) << context << '\n';
 }
 
-std::function<void(const Context&, std::exception_ptr)> makeThreadPrintErrorHandler(std::ostream& os)
-{
-    return [&os](const Context& context, const std::exception_ptr& eptr){
-        try {
-            std::rethrow_exception(eptr);
-        }
-        catch (const std::exception& e) {
-            os << e << '\n';
-        }
-        catch (...) {
-            os << "Unknown exception" << '\n';
-        }
+std::ostream& print_exception(std::ostream& os, const std::exception_ptr& eptr) {
+    try {
+        std::rethrow_exception(eptr);
+    }
+    catch (const std::exception& e) {
+        return os << e << '\n';
+    }
+    catch (...) {
+        return os << "Unknown exception" << '\n';
+    }
+}
 
-        os << context << '\n';
+std::function<void(const Context&, std::exception_ptr)> make_print_and_rethrow_error_handler(std::ostream& os) {
+    return [&os](const Context& context, const std::exception_ptr& eptr) {
+        print_exception_and_context(os, eptr, context);
         std::rethrow_exception(eptr);
     };
 }
-
-}
+} // namespace y::error

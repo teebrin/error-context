@@ -1,31 +1,41 @@
 #ifndef Y_UNIQUE_C_PTR_H
 #define Y_UNIQUE_C_PTR_H
 
-#include <type_traits>
-#include <cstdlib>
 #include <memory>
 
 namespace y {
-
 template<typename T>
 class UniqueCPtr {
-    T* p;
 public:
-    UniqueCPtr(T* p = nullptr): p(p) {}
-    UniqueCPtr(UniqueCPtr<T>&& p): p(p.p) {}
-    ~UniqueCPtr() { std::free((void*)p); }
+    explicit UniqueCPtr(T* p = nullptr) : p_(p) {
+    }
 
-    T* get() const { return p; }
-    T* release() { auto p = this->p; this->p = nullptr; return p; }
-    void reset(T* p = nullptr) { std::free((void*)this->p); this->p = p; }
+    UniqueCPtr(UniqueCPtr&& p) noexcept : p_(p.release()) {
+    }
 
-    UniqueCPtr<T>& operator=(UniqueCPtr<T>&& p) { if (&p != this) { reset(p.release()); } return *this; }
-    operator bool() { return (bool)get(); }
+    ~UniqueCPtr() { std::free(const_cast<std::remove_cv_t<T>*>(p_)); }
+
+    T* get() const { return p_; }
+    T* release() { return std::exchange(p_, nullptr); }
+
+    void reset(T* p = nullptr) {
+        std::free(const_cast<std::remove_cv_t<T>*>(std::exchange(p_, p)));
+    }
+
+    UniqueCPtr& operator=(UniqueCPtr&& p) noexcept {
+        if (&p != this) {
+            reset(p.release());
+        }
+        return *this;
+    }
+
+    operator bool() const { return static_cast<bool>(get()); } // NOLINT(*-explicit-constructor)
     const T& operator*() const { return *get(); }
     T& operator*() { return *get(); }
+
+private:
+    T* p_;
 };
+} // namespace y
 
-}
-
-
-#endif //Y_UNIQUE_C_PTR_H
+#endif // Y_UNIQUE_C_PTR_H

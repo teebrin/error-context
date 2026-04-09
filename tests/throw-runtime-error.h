@@ -1,0 +1,6 @@
+#ifndef ERROR_CONTEXT_THROW_RUNTIME_ERROR_H
+#define ERROR_CONTEXT_THROW_RUNTIME_ERROR_H
+
+[[noreturn]] void throwRuntimeError();
+
+#endif //ERROR_CONTEXT_THROW_RUNTIME_ERROR_H

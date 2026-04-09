@@ -1,4 +1,4 @@
-add_executable(error-context-tests tests.cpp throwRuntimeError.cpp)
+add_executable(error-context-tests tests.cpp throw-runtime-error.cpp)
 find_package(GTest REQUIRED)
 
 target_link_libraries(error-context-tests

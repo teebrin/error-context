@@ -5,12 +5,10 @@
 #include <cxxabi.h>
 #include <functional>
 #include <iostream>
-#include <unordered_map>
 #include <typeindex>
-
+#include <unordered_map>
 
 namespace y::error {
-
 struct DetailBase {
     virtual ~DetailBase() = default;
     virtual std::ostream& stream(std::ostream& s) const = 0;
@@ -18,88 +16,119 @@ struct DetailBase {
 
 template<typename T>
 struct Detail final : DetailBase {
-    using ValueType = typename T::ValueType;
+    using ValueType = T::ValueType;
     const ValueType value;
 
-    Detail(ValueType value) : value(std::move(value)) {}
+    explicit Detail(ValueType value) : value(std::move(value)) {
+    }
 
     std::ostream& stream(std::ostream& s) const override { return s << value; }
 };
 
 class Context {
     using ValueType = std::unique_ptr<DetailBase>;
-
-    StackTrace stackTrace;
     using DetailsByType = std::unordered_map<std::type_index, ValueType>;
-    DetailsByType detailsByType;
-    Context* previousContext;
 
 public:
-    static thread_local Context* current;
-    struct Details { const Context& context; };
+    struct Details {
+        const Context& context;
+    };
 
-    Context() : previousContext(current) { current = this; }
+    Context() : previous_context_(current_) { current_ = this; }
 
     ~Context() {
-        if (std::uncaught_exceptions() && previousContext) {
-            previousContext->detailsByType.merge(detailsByType);
+        if (std::uncaught_exceptions() && previous_context_) {
+            previous_context_->details_by_type_.merge(details_by_type_);
         }
-        current = previousContext;
+        current_ = previous_context_;
     }
 
-    void captureBackTrace() { stackTrace = StackTrace::current(); }
-    void clearDetails() { detailsByType.clear(); }
+    void capture_stack_trace() { stack_trace_ = StackTrace::current(); }
+    void clear_details() { details_by_type_.clear(); }
 
-    [[nodiscard]] const DetailsByType& getDetailsByType() const { return detailsByType; }
-    [[nodiscard]] const StackTrace& getStackTrace() const { return stackTrace; }
+    [[nodiscard]] const DetailsByType& get_details_by_type() const {
+        return details_by_type_;
+    }
 
-    Details getDetails() const { return Details{*this}; }
+    [[nodiscard]] const StackTrace& get_stack_trace() const {
+        return stack_trace_;
+    }
+
+    Details get_details() const { return Details{*this}; }
 
     template<typename T>
-    bool hasDetail() {
-        return detailsByType.find(typeid(T)) != detailsByType.end();
+    bool has_detail() {
+        return details_by_type_.find(typeid(T)) != details_by_type_.end();
     }
 
     template<typename T>
-    const typename T::ValueType& getDetail() {
-        return static_cast<Detail<T>&>(*detailsByType[typeid(T)]).value;
+    const T::ValueType& get_detail() {
+        return static_cast<Detail<T>&>(*details_by_type_[typeid(T)]).value;
     }
 
     template<typename T>
-    inline static void addDetail(typename T::ValueType detail) {
-        auto context = current;
-        if (context) { context->addDetail(typeid(T), std::make_unique<Detail<T>>(std::move(detail))); }
+    static void add_detail(T::ValueType detail) {
+        if (auto context = current_) {
+            context->add_detail(
+                typeid(T),
+                std::make_unique<Detail<T>>(std::move(detail)));
+        }
     }
+
+    static Context* current() { return current_; }
 
 private:
-    void addDetail(const std::type_info& typeinfo, ValueType detail);
+    void add_detail(const std::type_info& typeinfo, ValueType detail);
+
+    StackTrace stack_trace_;
+    DetailsByType details_by_type_;
+    Context* previous_context_;
+
+    static thread_local Context* current_;
 };
 
-template<typename F, typename E,
-        std::enable_if_t<std::is_invocable<F>::value, bool> = true,
-        std::enable_if_t<std::is_invocable<E, const Context&, std::exception_ptr>::value, bool> = true>
-typename std::invoke_result<F>::type handleExceptionsWithContext(F f, E errorHandler) {
-    Context errorContext;
+template<std::invocable<> F, std::invocable<Context&, std::exception_ptr> E>
+std::invoke_result_t<F> run_with_context(F f, E error_handler) {
+    // ReSharper disable once CppTooWideScope
+    Context context;
     try {
         return f();
     }
 #if !__clang__
-    catch (const abi::__forced_unwind&) {
-      throw;
+  catch (const abi::__forced_unwind&){
+        throw;
+
+
     }
 #endif
     catch (...) {
-        return errorHandler(errorContext, std::current_exception());
+        return error_handler(context, std::current_exception());
     }
 }
 
-std::function<int(const Context&, std::exception_ptr)> makeMainPrintErrorHandler(std::ostream& os = std::cerr, int exitCode = EXIT_FAILURE);
-std::function<void(const Context&, std::exception_ptr)> makeThreadPrintErrorHandler(std::ostream& os = std::cerr);
 
+std::ostream& print_exception_and_context(std::ostream& os, const std::exception_ptr& eptr, const Context& context);
+std::ostream& print_exception(std::ostream& os, const std::exception_ptr& eptr);
+std::function<void(const Context&, std::exception_ptr)>
+make_print_and_rethrow_error_handler(std::ostream& os = std::cerr);
+
+template<typename T>
+auto make_print_and_return_error_handler(
+    std::ostream& os = std::cerr,
+    T failure_return_value = EXIT_FAILURE) {
+    return [&os, failure_return_value](const Context& context, const std::exception_ptr& eptr) {
+        print_exception_and_context(os, eptr, context);
+        return failure_return_value;
+    };
 }
+} // namespace y::error
 
 std::ostream& operator<<(std::ostream& stream, const std::exception& exception);
-std::ostream& operator<<(std::ostream& stream, const y::error::Context& errorContext);
-std::ostream& operator<<(std::ostream& stream, const y::error::Context::Details& details);
+std::ostream& operator<<(
+    std::ostream& stream,
+    const y::error::Context& errorContext);
+std::ostream& operator<<(
+    std::ostream& stream,
+    const y::error::Context::Details& details);
 
-#endif //Y_ERROR_H
+#endif // Y_ERROR_H

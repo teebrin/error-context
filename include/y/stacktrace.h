@@ -5,42 +5,49 @@
 #include <vector>
 
 namespace y {
-
 class StackTrace {
     using Trace = std::vector<const void*>;
-    Trace trace;
 
 public:
     static StackTrace current();
 
     class Iterator {
-        Trace::const_iterator it;
-        mutable UniqueCPtr<const char> symbol;
-        static UniqueCPtr<const char> Symbol(const void* mangledSymbol);
     public:
-        explicit Iterator(Trace::const_iterator it) : it(it) {}
+        explicit Iterator(const Trace::const_iterator it) : it_(it) {
+        }
 
         Iterator& operator++() {
-            symbol.reset();
-            ++it;
+            symbol_.reset();
+            ++it_;
             return *this;
         }
 
         const char* operator*() const {
-            if (!symbol) { symbol = Symbol(*it); }
-            return symbol.get();
+            if (!symbol_) { symbol_ = symbol(*it_); }
+            return symbol_.get();
         }
 
-        bool operator!=(const Iterator& other) const { return it != other.it; }
+        bool operator!=(const Iterator& other) const { return it_ != other.it_; }
+
+    private:
+        static UniqueCPtr<const char> symbol(const void* addr);
+
+        Trace::const_iterator it_;
+        mutable UniqueCPtr<const char> symbol_;
     };
 
-    [[nodiscard]] Iterator begin() const { return Iterator(trace.begin() == trace.end() ? trace.begin() : trace.begin() + 2); }
-    [[nodiscard]] Iterator end() const { return Iterator(trace.end()); }
-};
+    [[nodiscard]] Iterator begin() const {
+        return Iterator(trace_.begin() == trace_.end() ? trace_.begin() : trace_.begin() + 2);
+    }
 
+    [[nodiscard]] Iterator end() const { return Iterator(trace_.end()); }
+
+private:
+    Trace trace_;
+};
 }
 
-std::ostream& operator<<(std::ostream& stream, const y::StackTrace& stackTrace);
+std::ostream& operator<<(std::ostream& stream, const y::StackTrace& stack_trace);
 
 
 #endif //ERROR_CONTEXT_STACKTRACE_H
